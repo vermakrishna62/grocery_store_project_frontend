@@ -6,8 +6,18 @@ import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { motion } from "framer-motion";
-
 import { useRouter } from "next/navigation";
+import axiosInstance from "../utils/api";
+import Cookies from 'cookie_js';
+
+// Define interface for user data
+interface UserData {
+  g_email: string;
+  g_username: string;
+  g_password: string;
+  firstname:string;
+  lastname:string;
+}
 
 const Signin = () => {
   const router = useRouter();
@@ -16,7 +26,22 @@ const Signin = () => {
   const [generatedPassword, setGeneratedPassword] = useState<string>("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [userData, setUserData] = useState<UserData[]>([]); // State to hold fetched user data
+  const [isLogin, setIsLogin] = useState<boolean>(false);
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const { data } = await axiosInstance.get("/GrocerryAuth");
+      setUserData(data); // Set fetched data into state
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+  
   const generateRandomPassword = () => {
     const length = 10;
     const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -79,16 +104,42 @@ const Signin = () => {
       setShowModal(true);
       return;
     }
+
+     // Check if the provided email and password match any user data
+  const matchedUser = userData.find((user) => user.g_email === email && user.g_password === password);
+
+  if (matchedUser) {
+
+    Cookies.set("user",matchedUser.g_username);
+    Cookies.set("email",matchedUser.g_email);
+    Cookies.set("pass",matchedUser.g_password);
+    Cookies.set("fn",matchedUser.firstname);
+    Cookies.set("ln",matchedUser.lastname);
+
+    // If match found, navigate to the /main route and pass user data
+    setIsLogin(true);
+    // setShowModal(true);
+    setTimeout(() => {
+      setIsLogin(false);
+      // setShowModal(false);
+      router.push("/main");
+    }, 1000); // 1000 milliseconds = 1 second
+  } else {
+    // If no match found, show error message
+    setErrorMsg("Invalid email or password while attempting to login.");
+    setShowModal(true);
+  }
+
   };
 
-  // Modal Component
-
+ 
   interface ModalShowProps {
     open: boolean;
     msg: string;
+    flg?:boolean;
   }
 
-  const ModalShow: React.FC<ModalShowProps> = ({ open, msg }) => {
+  const ModalShow: React.FC<ModalShowProps> = ({ open, msg, flg=false}) => {
     return (
       <motion.div
         initial={{ scale: 0 }}
@@ -104,14 +155,17 @@ const Signin = () => {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.8 }}
-                src="/invalid.svg"
+                src={flg?"/success.svg":"/invalid.svg"}
               />
             </div>
             <div>
               <p className="text-sm">{msg}</p>
             </div>
             <button
-              onClick={() => setShowModal(false)}
+              onClick={() => {            
+                setIsLogin(false);
+                setShowModal(false);                
+              }}
               className="w-full px-3 py-2 bg-[#FF7645] rounded-lg text-white hover:scale-110 transition-all duration-300 ease-out"
             >
               Close
@@ -178,6 +232,9 @@ const Signin = () => {
 
   return (
     <>
+
+    {isLogin && (<ModalShow msg={"Login Successfull"} open={isLogin} flg={true} />)}
+
       {errorMsg && errorMsg.length > 0 && showModal && (
         <ModalShow msg={errorMsg} open={showModal} />
       )}
@@ -270,13 +327,13 @@ const Signin = () => {
                 >
                   Suggest Password
                 </label> */}
-                <button
+                {/* <button
                   type="button"
                   onClick={handleSuggestPassword}
                   className="block text-xs font-semibold leading-6   text-gray-900"
                 >
                   Suggest Password?
-                </button>
+                </button> */}
               </div>
             </div>
 

@@ -8,13 +8,23 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { motion } from "framer-motion";
 
 import { useRouter } from "next/navigation";
+import axiosInstance from "../utils/api";
+
+// Define interface for user data
+interface UserData {
+  g_email: string;
+  g_username: string;
+  g_password: string;
+}
 
 const SignUp = () => {
   const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState<string>("");
-  const [user,setUser] = useState<string>("")
+  const [user, setUser] = useState<string>("");
+  const [firstname, setFirstName] = useState<string>("");
+  const [lastname, setLastName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
 
@@ -45,6 +55,21 @@ const SignUp = () => {
   const [errorMsg, setErrorMsg] = useState<string>("");
   // const router = useRouter();
 
+  const [userData, setUserData] = useState<UserData[]>([]); // State to hold fetched user data
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const { data } = await axiosInstance.get("/GrocerryAuth");
+      setUserData(data); // Set fetched data into state
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
   useEffect(() => {
     setShowModal(false);
   }, []);
@@ -60,10 +85,22 @@ const SignUp = () => {
     }
 
     if (user.length < 8) {
-        setErrorMsg("Username must be at least 8 characters long.");
-        setShowModal(true);
-        return;
-      }
+      setErrorMsg("Username must be at least 8 characters long.");
+      setShowModal(true);
+      return;
+    }
+
+    if (firstname.length < 1) {
+      setErrorMsg("Firstname alteast be of 2 characters.");
+      setShowModal(true);
+      return;
+    }
+
+    if (lastname.length < 1) {
+      setErrorMsg("Lastname alteast be of 2 characters.");
+      setShowModal(true);
+      return;
+    }
 
     if (password.length < 8) {
       setErrorMsg("Password must be at least 8 characters long.");
@@ -88,6 +125,48 @@ const SignUp = () => {
       setShowModal(true);
       return;
     }
+
+    const emailExists = userData.find((data) => data.g_email === email);
+
+    if (emailExists) {
+      setErrorMsg("Email already registered. Please use a different email.");
+      setShowModal(true);
+      return;
+    }
+
+    try {
+      const { data } = await axiosInstance.post("/GrocerryAuth", {
+        email: email,
+        firstname:firstname,
+        lastname:lastname,
+        username: user,
+        password: password,
+      });
+
+      // console.log(data);
+
+    } catch (error:any) {
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        console.error("Server responded with an error:", error.response.data);
+        // Handle specific error cases, such as displaying error messages to the user
+        setErrorMsg("An error occurred during sign-up. Please try again.");
+        setShowModal(true);
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error("No response received:", error.request);
+        // Handle cases where the request was made but the server did not respond
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error("Error setting up request:", error.message);
+        // Handle other types of errors, such as network errors
+        setErrorMsg(
+          "An error occurred. Please check your internet connection and try again."
+        );
+        setShowModal(true);
+      }
+    }
   };
 
   // Modal Component
@@ -95,9 +174,10 @@ const SignUp = () => {
   interface ModalShowProps {
     open: boolean;
     msg: string;
+    flg?:boolean;
   }
 
-  const ModalShow: React.FC<ModalShowProps> = ({ open, msg }) => {
+  const ModalShow: React.FC<ModalShowProps> = ({ open, msg, flg=false}) => {
     return (
       <motion.div
         initial={{ scale: 0 }}
@@ -113,7 +193,7 @@ const SignUp = () => {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ duration: 0.8 }}
-                src="/invalid.svg"
+                src={flg?"/success.svg":"/invalid.svg"}
               />
             </div>
             <div>
@@ -141,10 +221,15 @@ const SignUp = () => {
       setEmail(value);
     } else if (name === "password") {
       setPassword(value);
+    } else if (name === "username") {
+      setUser(value);
     }
-    else if (name === "username") {
-        setUser(value);
-      }
+    else if (name === "firstname") {
+      setFirstName(value);
+    }
+    else if (name === "lastname") {
+      setLastName(value);
+    }
   };
 
   //   interface ModalShowProps {
@@ -194,25 +279,25 @@ const SignUp = () => {
         <ModalShow msg={errorMsg} open={showModal} />
       )}
 
-      <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+      <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-2 lg:px-8">
         <div className="sm:mx-auto sm:w-full sm:max-w-sm">
           {/* <img
         className="absolute top-0 left-0 mt-4 ml-10 h-10 w-auto"
         src="https://tailwindui.com/img/logos/mark.svg?color=indigo&shade=600"
         alt="Your Company"
       /> */}
-          <Image
+          {/* <Image
             src={"/vercel.svg"}
             alt="Gravity Logo"
             width={100}
             height={300}
             className="absolute top-0 left-0 mt-4 ml-10 h-10 w-auto"
-          ></Image>{" "}
+          ></Image>{" "} */}
           <h2
             style={{
-              marginTop: "5rem", // Default margin for desktop/laptop
+              marginTop: "2.8rem", // Default margin for desktop/laptop
             }}
-            className=" text-center text-2xl sm:text-3xl font-bold leading-9 text-gray-900 font-inter tracking-wide sm:mt-12 md:mt-8"
+            className=" text-center text-2xl sm:text-3xl font-bold leading-9 text-gray-900 font-inter tracking-wide"
           >
             Welcome to Grocery Signup{" "}
           </h2>
@@ -236,6 +321,50 @@ const SignUp = () => {
                   onChange={handleChange}
                   autoComplete="email"
                   placeholder="user@gmail.com"
+                  required
+                  className="block w-full px-3 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium leading-6 text-gray-900"
+              >
+                First Name
+              </label>
+              <div className="mt-2">
+                <input
+                  id="firstname"
+                  name="firstname"
+                  type="text"
+                  value={firstname}
+                  onChange={handleChange}
+                  autoComplete="firstname"
+                  placeholder="Firstname"
+                  required
+                  className="block w-full px-3 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium leading-6 text-gray-900"
+              >
+                Last Name
+              </label>
+              <div className="mt-2">
+                <input
+                  id="lastname"
+                  name="lastname"
+                  type="text"
+                  value={lastname}
+                  onChange={handleChange}
+                  autoComplete="lastname"
+                  placeholder="Lastname"
                   required
                   className="block w-full px-3 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 />
@@ -330,8 +459,8 @@ const SignUp = () => {
               <button
                 onClick={() => router.push("/")}
                 style={{
-                    border: "1px solid",
-                  }}
+                  border: "1px solid",
+                }}
                 className="text-red-800 font-semibold"
               >
                 Login
